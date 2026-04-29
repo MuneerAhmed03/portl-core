@@ -1,0 +1,44 @@
+{
+  "name": "portl",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./dist/portl.umd.cjs",
+  "module": "./dist/portl.js",
+  "types": "./types/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/portl.js",
+      "require": "./dist/portl.umd.cjs",
+      "types": "./types/index.d.ts"
+    },
+    "./drizzle": {
+      "import": "./dist/drizzle.js",
+      "require": "./dist/drizzle.umd.cjs",
+      "types": "./types/drizzle.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "types"
+  ],
+  "scripts": {
+    "build": "vite build && vite build --mode drizzle",
+    "dev": "vite build --watch",
+    "test": "vitest"
+  },
+  "peerDependencies": {
+    "drizzle-orm": ">=0.29.0"
+  },
+  "peerDependenciesMeta": {
+    "drizzle-orm": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "fake-indexeddb": "^6.0.0",
+    "typescript": "^5.3.0",
+    "vite": "^5.0.0",
+    "vite-plugin-dts": "^3.7.0",
+    "vitest": "^1.0.0"
+  }
+}
