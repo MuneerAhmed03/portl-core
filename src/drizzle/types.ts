@@ -7,6 +7,8 @@ export interface MigrationMeta {
   folderMillis: number
   hash: string
   bps: boolean
+  idx?: number
+  tag?: string
 }
 
 export interface MigrationConfig {

@@ -2,9 +2,14 @@ import { DB } from '../db/index'
 import type { MigrationConfig } from './types'
 
 const DEFAULT_MIGRATIONS_TABLE = '__portl_migrations'
+const VALID_IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]*$/
 
 function getMigrationsTable(config: MigrationConfig): string {
-  return config.migrationsTable ?? DEFAULT_MIGRATIONS_TABLE
+  const table = config.migrationsTable ?? DEFAULT_MIGRATIONS_TABLE
+  if (!VALID_IDENTIFIER.test(table)) {
+    throw new Error(`portl migration table name is invalid: ${table}`)
+  }
+  return table
 }
 
 export async function initDB(config: MigrationConfig): Promise<void> {
@@ -32,7 +37,8 @@ export async function initDB(config: MigrationConfig): Promise<void> {
         await DB.query(sql)
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error)
-        throw new Error(`portl migration failed at hash ${migration.hash}: ${message}`)
+        const label = migration.tag ? `${migration.tag} (${migration.hash})` : migration.hash
+        throw new Error(`portl migration failed at ${label}: ${message}`)
       }
     }
 

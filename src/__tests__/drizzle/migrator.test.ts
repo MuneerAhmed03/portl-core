@@ -85,7 +85,23 @@ describe('initDB', () => {
       initDB({
         migrations: [{ hash: 'boom', folderMillis: 1, sql: ['FAIL SQL'], bps: false }]
       })
-    ).rejects.toThrow('portl migration failed at hash boom: near "FAIL": syntax error')
+    ).rejects.toThrow('portl migration failed at boom: near "FAIL": syntax error')
+  })
+
+  it('includes migration tag when a tagged migration statement fails', async () => {
+    const { initDB } = await getMigratorModule()
+    queryMock
+      .mockResolvedValueOnce({ changes: 0, lastInsertRowid: 0 })
+      .mockResolvedValueOnce([])
+      .mockRejectedValueOnce(new Error('near "FAIL": syntax error'))
+
+    await expect(
+      initDB({
+        migrations: [
+          { hash: 'boom', tag: '0001_tagged', folderMillis: 1, sql: ['FAIL SQL'], bps: false }
+        ]
+      })
+    ).rejects.toThrow('portl migration failed at 0001_tagged (boom): near "FAIL": syntax error')
   })
 
   it('is idempotent when called twice with same migrations', async () => {
@@ -129,6 +145,15 @@ describe('initDB', () => {
     expect(queryMock.mock.calls[0]?.[0]).toContain('CREATE TABLE IF NOT EXISTS custom_migrations')
     expect(queryMock.mock.calls[1]?.[0]).toBe('SELECT hash FROM custom_migrations')
     expect(queryMock.mock.calls[3]?.[0]).toBe('INSERT INTO custom_migrations (hash, applied_at) VALUES (?, ?)')
+  })
+
+  it('rejects invalid custom migrationsTable names', async () => {
+    const { initDB } = await getMigratorModule()
+
+    await expect(initDB({ migrationsTable: 'bad; DROP TABLE notes', migrations: [] })).rejects.toThrow(
+      'portl migration table name is invalid: bad; DROP TABLE notes'
+    )
+    expect(queryMock).not.toHaveBeenCalled()
   })
 
   it('applies multiple SQL statements in a migration sequentially', async () => {

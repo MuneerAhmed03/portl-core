@@ -6,9 +6,10 @@
  *   2. Define your schema in schema.ts using drizzle-orm/sqlite-core
  *   3. Add drizzle.config.ts pointing to your schema
  *   4. Run: npx drizzle-kit generate
- *      This produces a migrations folder — import the json as migrations
- *   5. Call initDB({ migrations }) once at app startup before any queries
- *   6. Use the db instance from createDB(schema) for all queries
+ *   5. Run: npx portl drizzle bundle
+ *      This writes migrations.generated.ts for Portl's browser/Android runtime
+ *   6. Import migrations.generated.ts and call initDB({ migrations }) once at app startup
+ *   7. Use the db instance from createDB(schema) for all queries
  *
  * Without drizzle (raw SQL):
  *   import { DB } from 'portl'

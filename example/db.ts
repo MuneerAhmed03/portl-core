@@ -1,5 +1,5 @@
 import { createDB, initDB } from 'portl/drizzle'
-import migrations from './migrations.json'
+import migrations from './migrations.generated'
 import { schema } from './schema'
 
 export const db = createDB(schema)
