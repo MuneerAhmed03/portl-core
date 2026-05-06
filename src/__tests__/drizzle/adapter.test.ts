@@ -118,4 +118,34 @@ describe('drizzle adapter', () => {
     expect(queryMock.mock.calls[0]?.[1]).toEqual(['hello', 'world'])
     expect(typeof queryMock.mock.calls[0]?.[1]).not.toBe('string')
   })
+
+  it('createPortlDrizzle runs migrations before the first query', async () => {
+    const { createPortlDrizzle } = await getAdapterModule()
+    const db = createPortlDrizzle({
+      migrations: [{ hash: 'h1', folderMillis: 1, sql: ['CREATE TABLE notes (id INTEGER)'], bps: false }]
+    })
+    const table = { _: { name: 'notes' } }
+
+    await db.select().from(table)
+
+    expect(queryMock.mock.calls[0]?.[0]).toContain('CREATE TABLE IF NOT EXISTS __portl_migrations')
+    expect(queryMock).toHaveBeenCalledWith('CREATE TABLE notes (id INTEGER)')
+    expect(queryMock.mock.calls.at(-1)?.[0]).toMatch(/^\s*SELECT\s+/i)
+  })
+
+  it('createPortlDrizzle reuses the same bootstrap promise for later queries', async () => {
+    const { createPortlDrizzle } = await getAdapterModule()
+    const db = createPortlDrizzle({
+      migrations: [{ hash: 'h1', folderMillis: 1, sql: ['CREATE TABLE notes (id INTEGER)'], bps: false }]
+    })
+    const table = { _: { name: 'notes' } }
+
+    await db.select().from(table)
+    await db.insert(table).values({ title: 'hello' })
+
+    const migrationTableCreates = queryMock.mock.calls.filter(([sql]) =>
+      sql.includes('CREATE TABLE IF NOT EXISTS __portl_migrations')
+    )
+    expect(migrationTableCreates).toHaveLength(1)
+  })
 })
