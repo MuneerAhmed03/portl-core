@@ -41,8 +41,10 @@ describe('initDB', () => {
 
     await initDB({ migrations: makeMigrations() })
 
-    expect(queryMock.mock.calls[2]?.[0]).toBe('CREATE TABLE a (id INTEGER)')
-    expect(queryMock.mock.calls[4]?.[0]).toBe('CREATE TABLE b (id INTEGER)')
+    expect(queryMock.mock.calls[2]?.[0]).toBe('BEGIN')
+    expect(queryMock.mock.calls[3]?.[0]).toBe('CREATE TABLE a (id INTEGER)')
+    expect(queryMock.mock.calls[6]?.[0]).toBe('BEGIN')
+    expect(queryMock.mock.calls[7]?.[0]).toBe('CREATE TABLE b (id INTEGER)')
     nowSpy.mockRestore()
   })
 
@@ -144,7 +146,7 @@ describe('initDB', () => {
 
     expect(queryMock.mock.calls[0]?.[0]).toContain('CREATE TABLE IF NOT EXISTS custom_migrations')
     expect(queryMock.mock.calls[1]?.[0]).toBe('SELECT hash FROM custom_migrations')
-    expect(queryMock.mock.calls[3]?.[0]).toBe('INSERT INTO custom_migrations (hash, applied_at) VALUES (?, ?)')
+    expect(queryMock.mock.calls[4]?.[0]).toBe('INSERT INTO custom_migrations (hash, applied_at) VALUES (?, ?)')
   })
 
   it('rejects invalid custom migrationsTable names', async () => {
@@ -170,8 +172,10 @@ describe('initDB', () => {
       ]
     })
 
-    expect(queryMock.mock.calls[2]?.[0]).toBe('CREATE TABLE one (id INTEGER)')
-    expect(queryMock.mock.calls[3]?.[0]).toBe('ALTER TABLE one ADD COLUMN name TEXT')
-    expect(queryMock.mock.calls[4]?.[0]).toBe('INSERT INTO __portl_migrations (hash, applied_at) VALUES (?, ?)')
+    expect(queryMock.mock.calls[2]?.[0]).toBe('BEGIN')
+    expect(queryMock.mock.calls[3]?.[0]).toBe('CREATE TABLE one (id INTEGER)')
+    expect(queryMock.mock.calls[4]?.[0]).toBe('ALTER TABLE one ADD COLUMN name TEXT')
+    expect(queryMock.mock.calls[5]?.[0]).toBe('INSERT INTO __portl_migrations (hash, applied_at) VALUES (?, ?)')
+    expect(queryMock.mock.calls[6]?.[0]).toBe('COMMIT')
   })
 })

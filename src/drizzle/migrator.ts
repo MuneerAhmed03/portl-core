@@ -32,20 +32,23 @@ export async function initDB(config: MigrationConfig): Promise<void> {
       continue
     }
 
-    for (const sql of migration.sql) {
-      try {
+    try {
+      await DB.query('BEGIN')
+      for (const sql of migration.sql) {
         await DB.query(sql)
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error)
-        const label = migration.tag ? `${migration.tag} (${migration.hash})` : migration.hash
-        throw new Error(`portl migration failed at ${label}: ${message}`)
       }
-    }
 
-    await DB.query(`INSERT INTO ${migrationsTable} (hash, applied_at) VALUES (?, ?)`, [
-      migration.hash,
-      Date.now()
-    ])
+      await DB.query(`INSERT INTO ${migrationsTable} (hash, applied_at) VALUES (?, ?)`, [
+        migration.hash,
+        Date.now()
+      ])
+      await DB.query('COMMIT')
+    } catch (error) {
+      await DB.query('ROLLBACK').catch(() => undefined)
+      const message = error instanceof Error ? error.message : String(error)
+      const label = migration.tag ? `${migration.tag} (${migration.hash})` : migration.hash
+      throw new Error(`portl migration failed at ${label}: ${message}`)
+    }
     appliedHashes.add(migration.hash)
   }
 }
