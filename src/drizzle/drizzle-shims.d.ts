@@ -3,9 +3,33 @@ declare module 'drizzle-orm' {
 }
 
 declare module 'drizzle-orm/sqlite-proxy' {
+  export interface SqliteRemoteResult<T = unknown> {
+    rows?: T[]
+  }
+
+  export type RemoteMethod = 'run' | 'all' | 'values' | 'get'
+  export type RemoteCallback = (
+    sql: string,
+    params: unknown[],
+    method: RemoteMethod
+  ) => Promise<SqliteRemoteResult>
+
   export interface SqliteRemoteDatabase<TSchema extends Record<string, unknown> = Record<string, unknown>> {
+    select: () => {
+      from: (table: { _: { name?: string }; name?: string }) => Promise<unknown>
+    }
+    insert: (table: { _: { name?: string }; name?: string }) => {
+      values: (data: Record<string, unknown>) => Promise<unknown>
+    }
+    update: () => object
+    delete: () => object
     query: TSchema
   }
+
+  export function drizzle<TSchema extends Record<string, unknown> = Record<string, unknown>>(
+    callback: RemoteCallback,
+    config?: { schema?: TSchema }
+  ): SqliteRemoteDatabase<TSchema>
 }
 
 declare module 'drizzle-orm/sql-js' {

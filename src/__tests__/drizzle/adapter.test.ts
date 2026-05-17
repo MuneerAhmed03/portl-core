@@ -12,15 +12,18 @@ vi.mock('../../db/index', () => ({
 
 vi.mock('drizzle-orm', () => ({}))
 
-vi.mock('drizzle-orm/sql-js', () => {
+vi.mock('drizzle-orm/sqlite-proxy', () => {
   return {
-    drizzle(config: { client: { exec: (sql: string, params?: unknown[]) => Promise<unknown> }; schema?: unknown }) {
+    drizzle(
+      client: (sql: string, params: unknown[], method: 'run' | 'all' | 'values' | 'get') => Promise<{ rows: unknown[] }>,
+      config?: { schema?: unknown }
+    ) {
       const db = {
         select() {
           return {
             from(table: { name?: string; _: { name?: string } }) {
               const tableName = table._?.name ?? table.name ?? 'unknown_table'
-              return config.client.exec(`SELECT * FROM "${tableName}"`, [])
+              return client(`SELECT * FROM "${tableName}"`, [], 'all')
             }
           }
         },
@@ -32,9 +35,10 @@ vi.mock('drizzle-orm/sql-js', () => {
               const placeholders = keys.map(() => '?').join(', ')
               const columns = keys.map((key) => `"${key}"`).join(', ')
               const params = keys.map((key) => data[key])
-              return config.client.exec(
+              return client(
                 `INSERT INTO "${tableName}" (${columns}) VALUES (${placeholders})`,
-                params
+                params,
+                'run'
               )
             }
           }
@@ -55,7 +59,7 @@ vi.mock('drizzle-orm/sql-js', () => {
         query?: Record<string, unknown>
       }
 
-      if (config.schema) {
+      if (config?.schema) {
         db.query = { ...config.schema }
       }
 

@@ -1,26 +1,42 @@
 import { DB } from '../db/index'
-import { drizzle } from 'drizzle-orm/sql-js'
+import { drizzle as drizzleSqliteProxy } from 'drizzle-orm/sqlite-proxy'
 import type { SqliteRemoteDatabase } from 'drizzle-orm/sqlite-proxy'
 import { initDB } from './migrator'
 import type { MigrationConfig } from './types'
 
-try {
-  if (typeof drizzle !== 'function') {
-    throw new Error('drizzle export is unavailable')
-  }
-} catch {
-  throw new Error('portl: drizzle-orm is not installed. Run: npm install drizzle-orm')
-}
+type DrizzleMethod = 'run' | 'all' | 'values' | 'get'
+type DrizzleResult = { rows: unknown[] }
 
-function createPortlDriver() {
-  return {
-    exec(sql: string, params?: unknown[]) {
-      return DB.query(sql, params ?? [])
+function toDrizzleResult(result: unknown, method: DrizzleMethod): DrizzleResult {
+  if (result && typeof result === 'object' && 'rows' in result) {
+    const rows = (result as { rows?: unknown }).rows
+    if (Array.isArray(rows)) {
+      return { rows }
     }
   }
+
+  if (Array.isArray(result)) {
+    return method === 'get' ? { rows: result.length > 0 ? [result[0]] : [] } : { rows: result }
+  }
+
+  if (result === null || result === undefined) {
+    return { rows: [] }
+  }
+
+  return { rows: [result] }
 }
 
-function createReadyPortlDriver(config: MigrationConfig) {
+function createPortlDriver(ensureReady?: () => Promise<void>) {
+  return async (sql: string, params: unknown[], method: DrizzleMethod): Promise<DrizzleResult> => {
+    if (ensureReady) {
+      await ensureReady()
+    }
+    const queryResult = await DB.query(sql, params)
+    return toDrizzleResult(queryResult, method)
+  }
+}
+
+function createReadyPortlDriver(config: MigrationConfig): (sql: string, params: unknown[], method: DrizzleMethod) => Promise<DrizzleResult> {
   let readyPromise: Promise<void> | null = null
 
   function ensureReady(): Promise<void> {
@@ -30,36 +46,29 @@ function createReadyPortlDriver(config: MigrationConfig) {
     return readyPromise
   }
 
-  return {
-    async exec(sql: string, params?: unknown[]) {
-      await ensureReady()
-      return DB.query(sql, params ?? [])
-    }
-  }
+  return createPortlDriver(ensureReady)
 }
 
-export function createDB(): ReturnType<typeof drizzle>
+export function createDB(): SqliteRemoteDatabase
 export function createDB<TSchema extends Record<string, unknown>>(
   schema: TSchema
-): ReturnType<typeof drizzle<TSchema>> & SqliteRemoteDatabase<TSchema>
+): SqliteRemoteDatabase<TSchema>
 export function createDB<TSchema extends Record<string, unknown>>(
   schema?: TSchema
-): ReturnType<typeof drizzle> | (ReturnType<typeof drizzle<TSchema>> & SqliteRemoteDatabase<TSchema>) {
-  return drizzle({
-    client: createPortlDriver(),
+): SqliteRemoteDatabase | SqliteRemoteDatabase<TSchema> {
+  return drizzleSqliteProxy(createPortlDriver(), {
     schema
-  }) as ReturnType<typeof drizzle> | (ReturnType<typeof drizzle<TSchema>> & SqliteRemoteDatabase<TSchema>)
+  }) as SqliteRemoteDatabase | SqliteRemoteDatabase<TSchema>
 }
 
-export function createPortlDrizzle(config: MigrationConfig): ReturnType<typeof drizzle>
+export function createPortlDrizzle(config: MigrationConfig): SqliteRemoteDatabase
 export function createPortlDrizzle<TSchema extends Record<string, unknown>>(
   config: MigrationConfig & { schema: TSchema }
-): ReturnType<typeof drizzle<TSchema>> & SqliteRemoteDatabase<TSchema>
+): SqliteRemoteDatabase<TSchema>
 export function createPortlDrizzle<TSchema extends Record<string, unknown>>(
   config: MigrationConfig & { schema?: TSchema }
-): ReturnType<typeof drizzle> | (ReturnType<typeof drizzle<TSchema>> & SqliteRemoteDatabase<TSchema>) {
-  return drizzle({
-    client: createReadyPortlDriver(config),
+): SqliteRemoteDatabase | SqliteRemoteDatabase<TSchema> {
+  return drizzleSqliteProxy(createReadyPortlDriver(config), {
     schema: config.schema
-  }) as ReturnType<typeof drizzle> | (ReturnType<typeof drizzle<TSchema>> & SqliteRemoteDatabase<TSchema>)
+  }) as SqliteRemoteDatabase | SqliteRemoteDatabase<TSchema>
 }
