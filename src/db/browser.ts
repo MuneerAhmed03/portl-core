@@ -17,6 +17,8 @@ interface SqlJsStatic {
 }
 
 type SqlJsInit = (config: { locateFile: (file: string) => string }) => Promise<SqlJsStatic>
+type DrizzleMethod = 'run' | 'all' | 'values' | 'get'
+type DrizzleResult = { rows: unknown[] }
 
 declare global {
   var __portlSqlJsInit: SqlJsInit | undefined
@@ -81,6 +83,24 @@ export class BrowserDB {
       const lastInsertRows = db.exec('SELECT last_insert_rowid()')
       const lastInsertRowid = Number(lastInsertRows[0]?.values[0]?.[0] ?? 0)
       return { changes, lastInsertRowid } as T
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      throw new Error(message)
+    }
+  }
+
+  async drizzleQuery(sql: string, params: unknown[] = [], method: DrizzleMethod): Promise<DrizzleResult> {
+    try {
+      const db = await this.getDB()
+
+      if (method === 'run') {
+        db.run(sql, params)
+        return { rows: [] }
+      }
+
+      const results = db.exec(sql, params)
+      const rows = results[0]?.values ?? []
+      return method === 'get' ? { rows: rows[0] ?? [] } : { rows }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
       throw new Error(message)

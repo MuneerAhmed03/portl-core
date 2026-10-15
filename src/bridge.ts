@@ -8,6 +8,7 @@ declare global {
           storageClear(): string
           storageKeys(): string
           dbQuery(sql: string, paramsJson: string | null): string
+          dbQueryRaw(sql: string, paramsJson: string | null, method: string): string
         }
       | undefined
   }
@@ -20,4 +21,3 @@ export function isAndroid(): boolean {
 export function getBridge() {
   return window.AndroidBridge!
 }
-

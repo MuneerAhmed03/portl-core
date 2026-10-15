@@ -126,4 +126,29 @@ describe('DB browser fallback (sql.js)', () => {
     const rows = await DB.query<Row[]>('SELECT id, name, age FROM users WHERE name = ? AND age = ?', ['Alice', 30])
     expect(rows).toEqual([{ id: 1, name: 'Alice', age: 30 }])
   })
+
+  it('drizzleQuery returns array rows for read methods', async () => {
+    const DB = await getDBModule()
+    await DB.query('CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, age INTEGER)')
+    await DB.query('INSERT INTO users (name, age) VALUES (?, ?)', ['Alice', 30])
+    const result = await DB.__drizzleQuery('SELECT id, name, age FROM users', [], 'all')
+    expect(result).toEqual({ rows: [[1, 'Alice', 30]] })
+  })
+
+  it('drizzleQuery returns a single array row for get', async () => {
+    const DB = await getDBModule()
+    await DB.query('CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, age INTEGER)')
+    await DB.query('INSERT INTO users (name, age) VALUES (?, ?)', ['Alice', 30])
+    const result = await DB.__drizzleQuery('SELECT id, name, age FROM users', [], 'get')
+    expect(result).toEqual({ rows: [1, 'Alice', 30] })
+  })
+
+  it('drizzleQuery executes run methods without changing raw query behavior', async () => {
+    const DB = await getDBModule()
+    await DB.query('CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, age INTEGER)')
+    const result = await DB.__drizzleQuery('INSERT INTO users (name, age) VALUES (?, ?)', ['Alice', 30], 'run')
+    const rows = await DB.query<Row[]>('SELECT id, name, age FROM users')
+    expect(result).toEqual({ rows: [] })
+    expect(rows).toEqual([{ id: 1, name: 'Alice', age: 30 }])
+  })
 })

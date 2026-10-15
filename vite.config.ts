@@ -21,7 +21,7 @@ export default defineConfig(({ mode }) => {
             formats: ['es', 'umd']
           },
       rollupOptions: {
-        external: isDrizzle ? ['drizzle-orm', 'drizzle-orm/sql-js', 'drizzle-orm/sqlite-proxy'] : []
+        external: isDrizzle ? ['drizzle-orm', 'drizzle-orm/sqlite-proxy'] : []
       },
       emptyOutDir: !isDrizzle,
       sourcemap: true

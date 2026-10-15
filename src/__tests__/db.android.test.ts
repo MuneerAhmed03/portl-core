@@ -8,7 +8,8 @@ describe('AndroidDB', () => {
     storageDelete: vi.fn<[string], string>(),
     storageClear: vi.fn<[], string>(),
     storageKeys: vi.fn<[], string>(),
-    dbQuery: vi.fn<[string, string | null], string>()
+    dbQuery: vi.fn<[string, string | null], string>(),
+    dbQueryRaw: vi.fn<[string, string | null, string], string>()
   }
 
   const db = new AndroidDB()
@@ -56,5 +57,17 @@ describe('AndroidDB', () => {
     bridge.dbQuery.mockReturnValueOnce(JSON.stringify(resultObj))
     const result = await db.query<typeof resultObj>('INSERT INTO users(name) VALUES(?)', ['Alice'])
     expect(result).toEqual(resultObj)
+  })
+
+  it('drizzleQuery passes SQL, JSON params, and method to dbQueryRaw', async () => {
+    bridge.dbQueryRaw.mockReturnValueOnce(JSON.stringify({ rows: [[1, 'Alice']] }))
+    const result = await db.drizzleQuery('SELECT id, name FROM users WHERE id = ?', [1], 'all')
+    expect(bridge.dbQueryRaw).toHaveBeenCalledWith('SELECT id, name FROM users WHERE id = ?', '[1]', 'all')
+    expect(result).toEqual({ rows: [[1, 'Alice']] })
+  })
+
+  it('drizzleQuery throws when raw response contains error field', async () => {
+    bridge.dbQueryRaw.mockReturnValueOnce(JSON.stringify({ error: 'bad raw sql' }))
+    await expect(db.drizzleQuery('BAD SQL', [], 'all')).rejects.toThrow('bad raw sql')
   })
 })

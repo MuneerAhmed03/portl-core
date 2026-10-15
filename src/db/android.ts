@@ -1,6 +1,8 @@
 import { getBridge } from '../bridge'
 
 type ErrorResponse = { error: string }
+type DrizzleMethod = 'run' | 'all' | 'values' | 'get'
+type DrizzleResult = { rows: unknown[] }
 
 function hasErrorField(value: unknown): value is ErrorResponse {
   return (
@@ -22,5 +24,15 @@ export class AndroidDB {
       return parsed as T
     })
   }
-}
 
+  async drizzleQuery(sql: string, params: unknown[] = [], method: DrizzleMethod): Promise<DrizzleResult> {
+    return Promise.resolve().then(() => {
+      const result = getBridge().dbQueryRaw(sql, params.length > 0 ? JSON.stringify(params) : null, method)
+      const parsed = JSON.parse(result) as unknown
+      if (hasErrorField(parsed)) {
+        throw new Error(parsed.error)
+      }
+      return parsed as DrizzleResult
+    })
+  }
+}
